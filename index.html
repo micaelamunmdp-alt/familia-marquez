@@ -6,6 +6,7 @@
   <title>Control Financiero Familiar Integral</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 </head>
 <body class="bg-slate-100 text-slate-800 p-3 md:p-6">
   <div class="max-w-7xl mx-auto space-y-6">
@@ -19,6 +20,14 @@
       <div class="flex flex-wrap items-center gap-2">
         <label class="text-xs font-semibold text-slate-500 uppercase">Filtrar Mes:</label>
         <input type="month" id="filtroMes" onchange="render()" class="border rounded-lg p-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+        <label class="text-xs font-semibold text-slate-500 uppercase">Integrante:</label>
+        <select id="filtroPersona" onchange="render()" class="border rounded-lg p-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+          <option value="">Todos</option>
+          <option value="Ignacio">Ignacio</option>
+          <option value="Laura">Laura</option>
+          <option value="Fabricio">Fabricio</option>
+          <option value="Micaela">Micaela</option>
+        </select>
         <button onclick="limpiarFiltroMes()" class="text-xs bg-slate-200 hover:bg-slate-300 px-2.5 py-2 rounded-lg font-medium text-slate-700">Ver Todo</button>
         <button onclick="exportarBackup()" class="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 px-2.5 py-2 rounded-lg font-semibold">💾 Guardar Copia</button>
         <label class="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-2.5 py-2 rounded-lg font-semibold cursor-pointer">
@@ -52,6 +61,17 @@
       </div>
     </div>
 
+    <!-- Meta de Ahorro Familiar -->
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <div class="flex justify-between items-center mb-1.5">
+        <h3 class="text-sm font-bold text-slate-800">🎯 Meta de Ahorro Familiar</h3>
+        <span id="metaAhorroTexto" class="text-xs font-semibold text-slate-500">$0.00 de $20.000.000 (0%)</span>
+      </div>
+      <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden">
+        <div id="metaAhorroBarra" class="h-4 rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500" style="width: 0%"></div>
+      </div>
+    </div>
+
     <!-- Pestañas y Formularios + Gráficos -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       
@@ -76,7 +96,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">Monto ($)</label>
-              <input type="number" step="0.01" id="montoGasto" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
+              <input type="text" inputmode="decimal" id="montoGasto" required placeholder="0,00" oninput="formatearInputMonto(this)" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
             </div>
           </div>
           <div>
@@ -87,20 +107,16 @@
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">Categoría</label>
               <select id="categoriaGasto" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
-                <option value="Supermercado / Mercadería">Supermercado / Mercadería</option>
+                <option value="Alimentos">Alimentos</option>
                 <option value="Servicios (Luz, Gas, Agua, Internet)">Servicios (Luz, Gas, Agua, Internet)</option>
                 <option value="Recarga de Celular">Recarga de Celular</option>
-                <option value="Gimnasio / Deportes">Gimnasio / Deportes</option>
-                <option value="Vivienda / Alquiler / Expensas">Vivienda / Alquiler / Expensas</option>
+                <option value="Gimnasio">Gimnasio</option>
                 <option value="Mantenimiento Hogar">Mantenimiento Hogar</option>
                 <option value="Transporte (Uber/Didi)">Transporte (Uber/Didi)</option>
                 <option value="Combustible">Combustible</option>
-                <option value="Mantenimiento / Reparaciones Auto">Mantenimiento / Reparaciones Auto</option>
-                <option value="Salud / Farmacia / Obra Social">Salud / Farmacia</option>
-                <option value="Ocio / Salidas / Comidas Fuera">Ocio / Salidas</option>
-                <option value="Mascotas">Mascotas</option>
-                <option value="Indumentaria / Ropa">Indumentaria / Ropa</option>
-                <option value="Otros">Otros</option>
+                <option value="Mantenimiento Auto">Mantenimiento Auto</option>
+                <option value="Salud / Farmacia">Salud / Farmacia</option>
+                <option value="Préstamo Bancario">Préstamo Bancario</option>
               </select>
             </div>
             <div>
@@ -144,7 +160,11 @@
               <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
             </select>
           </div>
-          <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Gasto</button>
+          <input type="hidden" id="editIdGasto" value="">
+          <div class="flex gap-2">
+            <button type="submit" id="btnSubmitGasto" class="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Gasto</button>
+            <button type="button" id="btnCancelGasto" onclick="cancelarEdicion('gasto')" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-3 rounded-lg text-xs">Cancelar</button>
+          </div>
         </form>
 
         <!-- Formulario: Ingreso -->
@@ -157,7 +177,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">Monto ($)</label>
-              <input type="number" step="0.01" id="montoIngreso" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+              <input type="text" inputmode="decimal" id="montoIngreso" required placeholder="0,00" oninput="formatearInputMonto(this)" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
             </div>
           </div>
           <div>
@@ -168,11 +188,8 @@
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">Categoría</label>
               <select id="categoriaIngreso" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
-                <option value="Sueldo / Salario Líquido">Sueldo / Salario Líquido</option>
-                <option value="Trabajo Indep. / Freelance">Trabajo Indep. / Freelance</option>
-                <option value="Venta de Bienes">Venta de Bienes</option>
+                <option value="Sueldo">Sueldo</option>
                 <option value="Inversiones / Rendimientos">Inversiones / Rendimientos</option>
-                <option value="Regalo / Bonificación">Regalo / Bonificación</option>
                 <option value="Otros Ingresos">Otros Ingresos</option>
               </select>
             </div>
@@ -194,7 +211,11 @@
               <option value="Mercado Pago">Mercado Pago</option>
             </select>
           </div>
-          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Ingreso</button>
+          <input type="hidden" id="editIdIngreso" value="">
+          <div class="flex gap-2">
+            <button type="submit" id="btnSubmitIngreso" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Ingreso</button>
+            <button type="button" id="btnCancelIngreso" onclick="cancelarEdicion('ingreso')" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-3 rounded-lg text-xs">Cancelar</button>
+          </div>
         </form>
 
         <!-- Formulario: Ahorro -->
@@ -207,7 +228,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">Monto ($)</label>
-              <input type="number" step="0.01" id="montoAhorro" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+              <input type="text" inputmode="decimal" id="montoAhorro" required placeholder="0,00" oninput="formatearInputMonto(this)" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
           </div>
           <div>
@@ -235,7 +256,11 @@
               </select>
             </div>
           </div>
-          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Ahorro</button>
+          <input type="hidden" id="editIdAhorro" value="">
+          <div class="flex gap-2">
+            <button type="submit" id="btnSubmitAhorro" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Ahorro</button>
+            <button type="button" id="btnCancelAhorro" onclick="cancelarEdicion('ahorro')" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-3 rounded-lg text-xs">Cancelar</button>
+          </div>
         </form>
 
         <!-- Formulario: Transferencia -->
@@ -248,7 +273,7 @@
             </div>
             <div>
               <label class="block text-xs font-semibold text-slate-500 mb-1">Monto ($)</label>
-              <input type="number" step="0.01" id="montoTransf" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+              <input type="text" inputmode="decimal" id="montoTransf" required placeholder="0,00" oninput="formatearInputMonto(this)" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2">
@@ -273,14 +298,23 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-500 mb-1">Tipo de Transferencia</label>
-            <div class="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-lg text-xs font-bold text-center">
+            <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-lg text-xs font-bold text-center">
               <label class="py-1.5 rounded-md cursor-pointer has-[:checked]:bg-white has-[:checked]:shadow has-[:checked]:text-purple-700 text-slate-500">
                 <input type="radio" name="tipoTransf" value="donacion" checked class="hidden"> Donación
               </label>
               <label class="py-1.5 rounded-md cursor-pointer has-[:checked]:bg-white has-[:checked]:shadow has-[:checked]:text-amber-700 text-slate-500">
                 <input type="radio" name="tipoTransf" value="deuda" class="hidden"> Deuda
               </label>
+              <label class="py-1.5 rounded-md cursor-pointer has-[:checked]:bg-white has-[:checked]:shadow has-[:checked]:text-emerald-700 text-slate-500">
+                <input type="radio" name="tipoTransf" value="saldar_deuda" class="hidden"> Saldar Deuda
+              </label>
             </div>
+          </div>
+          <div id="wrapDeudaASaldar" class="hidden">
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Deuda que se está saldando</label>
+            <select id="deudaASaldar" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+              <option value="">— Ninguna (solo registrar el pago) —</option>
+            </select>
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-500 mb-1">Modalidad / Canal</label>
@@ -294,7 +328,11 @@
             <label class="block text-xs font-semibold text-slate-500 mb-1">Motivo / Nota (Opcional)</label>
             <input type="text" id="notaTransf" placeholder="Ej: Devolución súper, aporte luz" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
           </div>
-          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Transferencia</button>
+          <input type="hidden" id="editIdTransf" value="">
+          <div class="flex gap-2">
+            <button type="submit" id="btnSubmitTransf" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Transferencia</button>
+            <button type="button" id="btnCancelTransf" onclick="cancelarEdicion('transf')" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 px-3 rounded-lg text-xs">Cancelar</button>
+          </div>
         </form>
 
       </div>
@@ -355,7 +393,7 @@
       <!-- Tabla Gastos -->
       <div class="bg-white p-5 rounded-2xl shadow-sm overflow-x-auto">
         <div class="flex justify-between items-center mb-3">
-          <h3 class="text-base font-bold text-slate-800">Historial de Gastos Reales del Hogar</h3>
+          <h3 class="text-base font-bold text-slate-800">Registro de Gastos Reales del Hogar</h3>
           <span id="cantGastos" class="text-xs bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold">0 registros</span>
         </div>
         <table class="w-full text-left text-xs text-slate-600">
@@ -379,7 +417,7 @@
         
         <!-- Tabla Ingresos -->
         <div class="bg-white p-5 rounded-2xl shadow-sm overflow-x-auto">
-          <h3 class="text-base font-bold text-emerald-800 mb-3">Ingresos Externos</h3>
+          <h3 class="text-base font-bold text-emerald-800 mb-3">Registro de Ingresos Externos</h3>
           <table class="w-full text-left text-xs text-slate-600">
             <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
               <tr>
@@ -396,7 +434,7 @@
 
         <!-- Tabla Ahorros -->
         <div class="bg-white p-5 rounded-2xl shadow-sm overflow-x-auto">
-          <h3 class="text-base font-bold text-blue-800 mb-3">Ahorros y Fondos</h3>
+          <h3 class="text-base font-bold text-blue-800 mb-3">Registro de Ahorros y Fondos</h3>
           <table class="w-full text-left text-xs text-slate-600">
             <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
               <tr>
@@ -413,7 +451,7 @@
 
         <!-- Tabla Transferencias -->
         <div class="bg-white p-5 rounded-2xl shadow-sm overflow-x-auto">
-          <h3 class="text-base font-bold text-indigo-800 mb-3">Transferencias Internas</h3>
+          <h3 class="text-base font-bold text-indigo-800 mb-3">Registro de Transferencias Internas</h3>
           <table class="w-full text-left text-xs text-slate-600">
             <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
               <tr>
@@ -430,6 +468,23 @@
 
       </div>
 
+    </div>
+
+    <!-- Comparativa Mensual por Categoría -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm">
+      <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+        <div>
+          <h3 class="text-base font-bold text-slate-900">Comparativa: Mes Actual vs. Mes Anterior</h3>
+          <p id="comparativaResumen" class="text-xs text-slate-500 mt-0.5">Cargando comparativa…</p>
+        </div>
+        <label class="flex items-center gap-2 text-xs font-semibold text-slate-600 cursor-pointer select-none">
+          <input type="checkbox" id="toggleComparativaChart" onchange="toggleComparativaChart()">
+          Mostrar gráfico
+        </label>
+      </div>
+      <div id="contComparativaChart" class="hidden h-72 mt-3">
+        <canvas id="chartComparativa"></canvas>
+      </div>
     </div>
 
   </div>
@@ -451,6 +506,7 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    if (window.ChartDataLabels) Chart.register(window.ChartDataLabels);
     const db = getAuth ? getDatabase(app) : null;
     const auth = getAuth(app);
 
@@ -472,6 +528,36 @@
     });
 
     const INTEGRANTES = ['Ignacio', 'Laura', 'Fabricio', 'Micaela'];
+
+    // Formatea en vivo un input de monto: puntos de miles, coma decimal (formato AR).
+    window.formatearInputMonto = (input) => {
+      let valor = input.value.replace(/[^\d,]/g, '');
+      const primeraComa = valor.indexOf(',');
+      if (primeraComa !== -1) {
+        valor = valor.slice(0, primeraComa + 1) + valor.slice(primeraComa + 1).replace(/,/g, '');
+      }
+      const partes = valor.split(',');
+      let entero = partes[0].replace(/^0+(?=\d)/, '');
+      entero = entero.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+      let resultado = entero;
+      if (partes.length > 1) {
+        resultado += ',' + partes[1].slice(0, 2);
+      }
+      input.value = resultado;
+    };
+
+    // Convierte un texto con formato "1.234,56" a número JS (1234.56)
+    function valorMontoANumero(texto) {
+      if (texto === undefined || texto === null || texto === '') return NaN;
+      const limpio = String(texto).replace(/\./g, '').replace(',', '.');
+      return parseFloat(limpio);
+    }
+
+    // Convierte un número JS a texto con formato "1.234,56" para precargar un input
+    function numeroAValorMonto(num) {
+      if (num === undefined || num === null || isNaN(num)) return '';
+      return Number(num).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
 
     // Los datos ahora viven en Firebase, no en localStorage.
     // Estos arrays son sólo una copia local que se actualiza sola
@@ -511,7 +597,7 @@
       onValue(refGastos, snap => { gastos = snapshotToArray(snap); render(); });
       onValue(refIngresos, snap => { ingresos = snapshotToArray(snap); render(); });
       onValue(refAhorros, snap => { ahorros = snapshotToArray(snap); render(); });
-      onValue(refTransf, snap => { transferencias = snapshotToArray(snap); render(); });
+      onValue(refTransf, snap => { transferencias = snapshotToArray(snap); poblarDeudasASaldar(); render(); });
     });
 
     function toggleForm(tipo) {
@@ -550,10 +636,11 @@
     document.getElementById('formGasto').addEventListener('submit', e => {
       e.preventDefault();
       const pagador = document.getElementById('integranteGasto').value;
-      const monto = parseFloat(document.getElementById('montoGasto').value);
+      const monto = valorMontoANumero(document.getElementById('montoGasto').value);
       const concepto = document.getElementById('conceptoGasto').value;
       const fecha = document.getElementById('fechaGasto').value;
       const modoDivision = document.querySelector('input[name="divisionGasto"]:checked').value;
+      const editId = document.getElementById('editIdGasto').value;
 
       let divididoEntre = null;
       if (modoDivision === 'todos') {
@@ -563,7 +650,7 @@
         divididoEntre = seleccionados.length > 0 ? seleccionados : null;
       }
 
-      push(refGastos, {
+      const datosGasto = {
         fecha,
         concepto,
         monto,
@@ -571,26 +658,34 @@
         integrante: pagador,
         medio: document.getElementById('medioGasto').value,
         divididoEntre
-      });
+      };
 
-      // Si se divide entre más de una persona, se genera una deuda
-      // automática de cada integrante (menos quien pagó) hacia el pagador.
-      if (divididoEntre && divididoEntre.length > 1) {
-        const parte = monto / divididoEntre.length;
-        divididoEntre.forEach(persona => {
-          if (persona !== pagador) {
-            push(refTransf, {
-              fecha,
-              monto: parte,
-              origen: pagador,
-              destino: persona,
-              canal: 'Gasto Dividido',
-              tipo: 'deuda',
-              saldada: false,
-              nota: `Parte del gasto: ${concepto}`
-            });
-          }
-        });
+      if (editId) {
+        // Editando un gasto existente: solo actualiza sus datos.
+        // No vuelve a generar deudas automáticas para evitar duplicarlas.
+        update(ref(db, `gastos/${editId}`), datosGasto);
+      } else {
+        push(refGastos, datosGasto);
+
+        // Si se divide entre más de una persona, se genera una deuda
+        // automática de cada integrante (menos quien pagó) hacia el pagador.
+        if (divididoEntre && divididoEntre.length > 1) {
+          const parte = monto / divididoEntre.length;
+          divididoEntre.forEach(persona => {
+            if (persona !== pagador) {
+              push(refTransf, {
+                fecha,
+                monto: parte,
+                origen: pagador,
+                destino: persona,
+                canal: 'Gasto Dividido',
+                tipo: 'deuda',
+                saldada: false,
+                nota: `Parte del gasto: ${concepto}`
+              });
+            }
+          });
+        }
       }
 
       document.getElementById('conceptoGasto').value = '';
@@ -598,33 +693,130 @@
       document.querySelectorAll('.chkDivisionGasto').forEach(c => c.checked = false);
       document.querySelector('input[name="divisionGasto"][value="ninguno"]').checked = true;
       document.getElementById('checksDivisionGasto').classList.add('hidden');
+      cancelarEdicion('gasto');
     });
+
+    window.editarGasto = (id) => {
+      const item = gastos.find(g => g.id === id);
+      if (!item) return;
+      toggleForm('gasto');
+      document.getElementById('editIdGasto').value = id;
+      document.getElementById('fechaGasto').value = item.fecha;
+      document.getElementById('conceptoGasto').value = item.concepto;
+      document.getElementById('montoGasto').value = numeroAValorMonto(item.monto);
+      document.getElementById('categoriaGasto').value = item.categoria;
+      document.getElementById('integranteGasto').value = item.integrante;
+      document.getElementById('medioGasto').value = item.medio;
+
+      const modo = !item.divididoEntre ? 'ninguno' : (item.divididoEntre.length === INTEGRANTES.length ? 'todos' : 'algunos');
+      document.querySelector(`input[name="divisionGasto"][value="${modo}"]`).checked = true;
+      document.querySelectorAll('.chkDivisionGasto').forEach(c => { c.checked = !!(item.divididoEntre && item.divididoEntre.includes(c.value)); });
+      document.getElementById('checksDivisionGasto').classList.toggle('hidden', modo !== 'algunos');
+
+      document.getElementById('btnSubmitGasto').innerText = 'Guardar Cambios';
+      document.getElementById('btnCancelGasto').classList.remove('hidden');
+      document.getElementById('formGasto').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     document.getElementById('formIngreso').addEventListener('submit', e => {
       e.preventDefault();
-      push(refIngresos, {
+      const editId = document.getElementById('editIdIngreso').value;
+      const datosIngreso = {
         fecha: document.getElementById('fechaIngreso').value,
         concepto: document.getElementById('conceptoIngreso').value,
-        monto: parseFloat(document.getElementById('montoIngreso').value),
+        monto: valorMontoANumero(document.getElementById('montoIngreso').value),
         categoria: document.getElementById('categoriaIngreso').value,
         integrante: document.getElementById('integranteIngreso').value,
         medio: document.getElementById('medioIngreso').value
-      });
+      };
+      if (editId) {
+        update(ref(db, `ingresos/${editId}`), datosIngreso);
+      } else {
+        push(refIngresos, datosIngreso);
+      }
       document.getElementById('conceptoIngreso').value = '';
       document.getElementById('montoIngreso').value = '';
+      cancelarEdicion('ingreso');
     });
+
+    window.editarIngreso = (id) => {
+      const item = ingresos.find(i => i.id === id);
+      if (!item) return;
+      toggleForm('ingreso');
+      document.getElementById('editIdIngreso').value = id;
+      document.getElementById('fechaIngreso').value = item.fecha;
+      document.getElementById('conceptoIngreso').value = item.concepto;
+      document.getElementById('montoIngreso').value = numeroAValorMonto(item.monto);
+      document.getElementById('categoriaIngreso').value = item.categoria;
+      document.getElementById('integranteIngreso').value = item.integrante;
+      document.getElementById('medioIngreso').value = item.medio;
+      document.getElementById('btnSubmitIngreso').innerText = 'Guardar Cambios';
+      document.getElementById('btnCancelIngreso').classList.remove('hidden');
+      document.getElementById('formIngreso').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
 
     document.getElementById('formAhorro').addEventListener('submit', e => {
       e.preventDefault();
-      push(refAhorros, {
+      const editId = document.getElementById('editIdAhorro').value;
+      const datosAhorro = {
         fecha: document.getElementById('fechaAhorro').value,
         concepto: document.getElementById('conceptoAhorro').value,
-        monto: parseFloat(document.getElementById('montoAhorro').value),
+        monto: valorMontoANumero(document.getElementById('montoAhorro').value),
         integrante: document.getElementById('integranteAhorro').value,
         medio: document.getElementById('medioAhorro').value
-      });
+      };
+      if (editId) {
+        update(ref(db, `ahorros/${editId}`), datosAhorro);
+      } else {
+        push(refAhorros, datosAhorro);
+      }
       document.getElementById('conceptoAhorro').value = '';
       document.getElementById('montoAhorro').value = '';
+      cancelarEdicion('ahorro');
+    });
+
+    window.editarAhorro = (id) => {
+      const item = ahorros.find(a => a.id === id);
+      if (!item) return;
+      toggleForm('ahorro');
+      document.getElementById('editIdAhorro').value = id;
+      document.getElementById('fechaAhorro').value = item.fecha;
+      document.getElementById('conceptoAhorro').value = item.concepto;
+      document.getElementById('montoAhorro').value = numeroAValorMonto(item.monto);
+      document.getElementById('integranteAhorro').value = item.integrante;
+      document.getElementById('medioAhorro').value = item.medio;
+      document.getElementById('btnSubmitAhorro').innerText = 'Guardar Cambios';
+      document.getElementById('btnCancelAhorro').classList.remove('hidden');
+      document.getElementById('formAhorro').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    function poblarDeudasASaldar(preseleccionarId) {
+      const sel = document.getElementById('deudaASaldar');
+      if (!sel) return;
+      const valorPrevio = preseleccionarId || sel.value;
+      const pendientes = transferencias
+        .filter(t => t.tipo === 'deuda' && !t.saldada)
+        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      sel.innerHTML = '<option value="">— Ninguna (solo registrar el pago) —</option>' + pendientes.map(d => `
+        <option value="${d.id}">${d.destino} le debe a ${d.origen}: $${d.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })} (${d.fecha})</option>
+      `).join('');
+      if (valorPrevio) sel.value = valorPrevio;
+    }
+
+    function actualizarVisibilidadDeudaASaldar() {
+      const tipoSel = document.querySelector('input[name="tipoTransf"]:checked');
+      const wrap = document.getElementById('wrapDeudaASaldar');
+      if (!tipoSel || !wrap) return;
+      if (tipoSel.value === 'saldar_deuda') {
+        wrap.classList.remove('hidden');
+        poblarDeudasASaldar();
+      } else {
+        wrap.classList.add('hidden');
+        document.getElementById('deudaASaldar').value = '';
+      }
+    }
+    document.querySelectorAll('input[name="tipoTransf"]').forEach(input => {
+      input.addEventListener('change', actualizarVisibilidadDeudaASaldar);
     });
 
     document.getElementById('formTransf').addEventListener('submit', e => {
@@ -638,21 +830,74 @@
       }
 
       const tipoSeleccionado = document.querySelector('input[name="tipoTransf"]:checked').value;
+      const editId = document.getElementById('editIdTransf').value;
+      const deudaSaldadaId = tipoSeleccionado === 'saldar_deuda' ? document.getElementById('deudaASaldar').value : '';
 
-      push(refTransf, {
+      const datosTransf = {
         fecha: document.getElementById('fechaTransf').value,
-        monto: parseFloat(document.getElementById('montoTransf').value),
+        monto: valorMontoANumero(document.getElementById('montoTransf').value),
         origen,
         destino,
         canal: document.getElementById('canalTransf').value,
         tipo: tipoSeleccionado,
-        saldada: false,
+        deudaId: deudaSaldadaId || null,
         nota: document.getElementById('notaTransf').value || 'Sin nota'
-      });
+      };
+
+      if (editId) {
+        update(ref(db, `transferencias/${editId}`), datosTransf);
+      } else {
+        push(refTransf, { ...datosTransf, saldada: false });
+      }
+
+      if (deudaSaldadaId) {
+        update(ref(db, `transferencias/${deudaSaldadaId}`), { saldada: true });
+      }
+
       document.getElementById('montoTransf').value = '';
       document.getElementById('notaTransf').value = '';
       document.querySelector('input[name="tipoTransf"][value="donacion"]').checked = true;
+      actualizarVisibilidadDeudaASaldar();
+      cancelarEdicion('transf');
     });
+
+    window.editarTransf = (id) => {
+      const item = transferencias.find(t => t.id === id);
+      if (!item) return;
+      toggleForm('transf');
+      document.getElementById('editIdTransf').value = id;
+      document.getElementById('fechaTransf').value = item.fecha;
+      document.getElementById('montoTransf').value = numeroAValorMonto(item.monto);
+      document.getElementById('origenTransf').value = item.origen;
+      document.getElementById('destinoTransf').value = item.destino;
+      document.getElementById('canalTransf').value = item.canal;
+      document.getElementById('notaTransf').value = item.nota === 'Sin nota' ? '' : item.nota;
+      document.querySelector(`input[name="tipoTransf"][value="${item.tipo || 'donacion'}"]`).checked = true;
+      actualizarVisibilidadDeudaASaldar();
+      if (item.tipo === 'saldar_deuda') poblarDeudasASaldar(item.deudaId || '');
+      document.getElementById('btnSubmitTransf').innerText = 'Guardar Cambios';
+      document.getElementById('btnCancelTransf').classList.remove('hidden');
+      document.getElementById('formTransf').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+
+    window.cancelarEdicion = (tipo) => {
+      const cfg = {
+        gasto: { editId: 'editIdGasto', btn: 'btnSubmitGasto', cancel: 'btnCancelGasto', texto: 'Añadir Gasto' },
+        ingreso: { editId: 'editIdIngreso', btn: 'btnSubmitIngreso', cancel: 'btnCancelIngreso', texto: 'Añadir Ingreso' },
+        ahorro: { editId: 'editIdAhorro', btn: 'btnSubmitAhorro', cancel: 'btnCancelAhorro', texto: 'Añadir Ahorro' },
+        transf: { editId: 'editIdTransf', btn: 'btnSubmitTransf', cancel: 'btnCancelTransf', texto: 'Añadir Transferencia' }
+      };
+      const c = cfg[tipo];
+      if (!c) return;
+      document.getElementById(c.editId).value = '';
+      document.getElementById(c.btn).innerText = c.texto;
+      document.getElementById(c.cancel).classList.add('hidden');
+      if (tipo === 'gasto') document.getElementById('formGasto').reset();
+      if (tipo === 'ingreso') document.getElementById('formIngreso').reset();
+      if (tipo === 'ahorro') document.getElementById('formAhorro').reset();
+      if (tipo === 'transf') { document.getElementById('formTransf').reset(); actualizarVisibilidadDeudaASaldar(); }
+    };
+    function cancelarEdicion(tipo) { window.cancelarEdicion(tipo); }
 
     window.borrarRegistro = (tipo, id) => {
       const paths = { gasto: 'gastos', ingreso: 'ingresos', ahorro: 'ahorros', transf: 'transferencias' };
@@ -667,6 +912,7 @@
 
     function limpiarFiltroMes() {
       document.getElementById('filtroMes').value = '';
+      document.getElementById('filtroPersona').value = '';
       render();
     }
     window.limpiarFiltroMes = limpiarFiltroMes;
@@ -728,13 +974,19 @@
     // Renderizado Principal
     function render() {
       const mesFiltro = document.getElementById('filtroMes').value;
+      const personaFiltro = document.getElementById('filtroPersona').value;
 
-      const filtrar = item => !mesFiltro || (item.fecha && item.fecha.startsWith(mesFiltro));
+      const porMes = item => !mesFiltro || (item.fecha && item.fecha.startsWith(mesFiltro));
 
-      const listGastos = gastos.filter(filtrar).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-      const listIngresos = ingresos.filter(filtrar).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-      const listAhorros = ahorros.filter(filtrar).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-      const listTransf = transferencias.filter(filtrar).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      const filtrarGasto = item => porMes(item) && (!personaFiltro || item.integrante === personaFiltro || (item.divididoEntre && item.divididoEntre.includes(personaFiltro)));
+      const filtrarIngreso = item => porMes(item) && (!personaFiltro || item.integrante === personaFiltro);
+      const filtrarAhorro = item => porMes(item) && (!personaFiltro || item.integrante === personaFiltro);
+      const filtrarTransf = item => porMes(item) && (!personaFiltro || item.origen === personaFiltro || item.destino === personaFiltro);
+
+      const listGastos = gastos.filter(filtrarGasto).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      const listIngresos = ingresos.filter(filtrarIngreso).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      const listAhorros = ahorros.filter(filtrarAhorro).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      const listTransf = transferencias.filter(filtrarTransf).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
       // Totales
       const sumG = listGastos.reduce((a, b) => a + b.monto, 0);
@@ -747,6 +999,9 @@
       document.getElementById('totalAhorros').innerText = `$${sumA.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
       document.getElementById('totalTransferencias').innerText = `$${sumT.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
       document.getElementById('totalBalance').innerText = `$${(sumI - sumG - sumA).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+
+      renderMetaAhorro();
+      renderComparativa();
 
       // Cálculo por Persona
       const resumenInd = {};
@@ -768,8 +1023,8 @@
         if (resumenInd[t.destino]) resumenInd[t.destino].transfRecibidas += t.monto;
       });
 
-      renderBalancesIndividuales(resumenInd);
-      renderDeudas();
+      renderBalancesIndividuales(resumenInd, personaFiltro);
+      renderDeudas(personaFiltro);
       renderTablaGastos(listGastos);
       renderTablaIngresos(listIngresos);
       renderTablaAhorros(listAhorros);
@@ -778,9 +1033,10 @@
     }
     window.render = render;
 
-    function renderBalancesIndividuales(data) {
+    function renderBalancesIndividuales(data, personaFiltro) {
       const cont = document.getElementById('gridBalancesIndividuales');
-      cont.innerHTML = INTEGRANTES.map(p => {
+      const personas = personaFiltro ? [personaFiltro] : INTEGRANTES;
+      cont.innerHTML = personas.map(p => {
         const d = data[p];
         const totalIngresosIndividual = d.ingresoExt + d.transfRecibidas;
         const totalEgresosIndividual = d.gastosPagados + d.transfEnviadas + d.ahorroAportado;
@@ -823,10 +1079,87 @@
       }).join('');
     }
 
-    function renderDeudas() {
+    const META_AHORRO = 20000000;
+    function renderMetaAhorro() {
+      // Usa el total real ahorrado por toda la familia, sin importar
+      // los filtros de mes/integrante activos arriba (es una meta compartida).
+      const totalReal = ahorros.reduce((a, b) => a + b.monto, 0);
+      const pct = Math.min(100, (totalReal / META_AHORRO) * 100);
+      document.getElementById('metaAhorroBarra').style.width = `${pct}%`;
+      document.getElementById('metaAhorroTexto').innerText =
+        `$${totalReal.toLocaleString('es-AR', { minimumFractionDigits: 2 })} de $${META_AHORRO.toLocaleString('es-AR')} (${((totalReal / META_AHORRO) * 100).toFixed(1)}%)`;
+    }
+
+    let chartComparativaObj;
+
+    function getMesActualStr() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+    function getMesAnteriorStr(mesStr) {
+      const [y, m] = mesStr.split('-').map(Number);
+      const d = new Date(y, m - 2, 1);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    window.toggleComparativaChart = () => {
+      const show = document.getElementById('toggleComparativaChart').checked;
+      document.getElementById('contComparativaChart').classList.toggle('hidden', !show);
+      renderComparativa();
+    };
+
+    function renderComparativa() {
+      const personaFiltro = document.getElementById('filtroPersona').value;
+      const mesActual = getMesActualStr();
+      const mesAnterior = getMesAnteriorStr(mesActual);
+      const pertenece = g => !personaFiltro || g.integrante === personaFiltro || (g.divididoEntre && g.divididoEntre.includes(personaFiltro));
+
+      const gastosActual = gastos.filter(g => pertenece(g) && g.fecha && g.fecha.startsWith(mesActual));
+      const gastosAnterior = gastos.filter(g => pertenece(g) && g.fecha && g.fecha.startsWith(mesAnterior));
+
+      const totalActual = gastosActual.reduce((a, b) => a + b.monto, 0);
+      const totalAnterior = gastosAnterior.reduce((a, b) => a + b.monto, 0);
+
+      const resumenEl = document.getElementById('comparativaResumen');
+      if (totalAnterior === 0 && totalActual === 0) {
+        resumenEl.innerText = 'Todavía no hay suficientes datos para comparar.';
+      } else {
+        const diff = totalActual - totalAnterior;
+        const pctDiff = totalAnterior ? ((diff / totalAnterior) * 100).toFixed(1) : null;
+        const flecha = diff > 0 ? '▲' : (diff < 0 ? '▼' : '=');
+        const detalle = pctDiff !== null ? ` (${flecha} ${Math.abs(pctDiff)}% vs. mes pasado)` : ' (mes pasado sin datos)';
+        resumenEl.innerText = `Este mes: $${totalActual.toLocaleString('es-AR', { minimumFractionDigits: 2 })} · Mes pasado: $${totalAnterior.toLocaleString('es-AR', { minimumFractionDigits: 2 })}${detalle}`;
+      }
+
+      if (!document.getElementById('toggleComparativaChart').checked) return;
+
+      const categorias = [...new Set([...gastosActual.map(g => g.categoria), ...gastosAnterior.map(g => g.categoria)])];
+      const dataActual = categorias.map(c => gastosActual.filter(g => g.categoria === c).reduce((a, b) => a + b.monto, 0));
+      const dataAnterior = categorias.map(c => gastosAnterior.filter(g => g.categoria === c).reduce((a, b) => a + b.monto, 0));
+
+      if (chartComparativaObj) chartComparativaObj.destroy();
+      chartComparativaObj = new Chart(document.getElementById('chartComparativa'), {
+        type: 'bar',
+        data: {
+          labels: categorias,
+          datasets: [
+            { label: 'Mes Actual', data: dataActual, backgroundColor: '#3b82f6' },
+            { label: 'Mes Anterior', data: dataAnterior, backgroundColor: '#cbd5e1' }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { datalabels: { display: false } }
+        }
+      });
+    }
+
+    function renderDeudas(personaFiltro) {
       // Las deudas se muestran siempre completas (sin filtro de mes),
       // porque son una obligación pendiente hasta que se salde.
-      const deudas = transferencias.filter(t => t.tipo === 'deuda');
+      // Sí respetan el filtro de integrante, si está activo.
+      const deudas = transferencias.filter(t => t.tipo === 'deuda' && (!personaFiltro || t.origen === personaFiltro || t.destino === personaFiltro));
       const pendientes = deudas.filter(d => !d.saldada).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
       const saldadas = deudas.filter(d => d.saldada).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
 
@@ -867,7 +1200,8 @@
           <td class="p-2.5 font-semibold text-slate-700">${item.integrante}</td>
           <td class="p-2.5 text-slate-500">${item.medio}</td>
           <td class="p-2.5 font-extrabold text-rose-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-          <td class="p-2.5 text-center">
+          <td class="p-2.5 text-center whitespace-nowrap">
+            <button onclick="editarGasto('${item.id}')" class="text-slate-400 hover:text-indigo-600 font-bold mr-2">✏️</button>
             <button onclick="borrarRegistro('gasto', '${item.id}')" class="text-slate-400 hover:text-rose-600 font-bold">✕</button>
           </td>
         </tr>
@@ -882,7 +1216,8 @@
           <td class="p-2 font-medium text-slate-800">${item.concepto} <br><span class="text-[10px] text-slate-400">${item.categoria}</span></td>
           <td class="p-2 font-semibold text-slate-700">${item.integrante}</td>
           <td class="p-2 font-extrabold text-emerald-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-          <td class="p-2 text-center">
+          <td class="p-2 text-center whitespace-nowrap">
+            <button onclick="editarIngreso('${item.id}')" class="text-slate-400 hover:text-indigo-600 font-bold mr-2">✏️</button>
             <button onclick="borrarRegistro('ingreso', '${item.id}')" class="text-slate-400 hover:text-rose-600 font-bold">✕</button>
           </td>
         </tr>
@@ -897,7 +1232,8 @@
           <td class="p-2 font-medium text-slate-800">${item.concepto}</td>
           <td class="p-2 font-semibold text-slate-700">${item.integrante}</td>
           <td class="p-2 font-extrabold text-blue-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-          <td class="p-2 text-center">
+          <td class="p-2 text-center whitespace-nowrap">
+            <button onclick="editarAhorro('${item.id}')" class="text-slate-400 hover:text-indigo-600 font-bold mr-2">✏️</button>
             <button onclick="borrarRegistro('ahorro', '${item.id}')" class="text-slate-400 hover:text-rose-600 font-bold">✕</button>
           </td>
         </tr>
@@ -913,11 +1249,14 @@
             ${item.origen} ➔ ${item.destino}
             ${item.tipo === 'deuda'
               ? `<br><span class="text-[10px] font-bold ${item.saldada ? 'text-emerald-500' : 'text-amber-600'}">${item.saldada ? '✓ Deuda saldada' : 'Deuda pendiente'}</span>`
+              : item.tipo === 'saldar_deuda'
+              ? `<br><span class="text-[10px] font-bold text-emerald-600">✓ Saldar Deuda${item.deudaId ? '' : ' (sin vincular)'}</span>`
               : `<br><span class="text-[10px] font-semibold text-purple-400">Donación</span>`}
           </td>
           <td class="p-2 text-slate-500">${item.canal}</td>
           <td class="p-2 font-extrabold text-purple-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
-          <td class="p-2 text-center">
+          <td class="p-2 text-center whitespace-nowrap">
+            <button onclick="editarTransf('${item.id}')" class="text-slate-400 hover:text-indigo-600 font-bold mr-2">✏️</button>
             <button onclick="borrarRegistro('transf', '${item.id}')" class="text-slate-400 hover:text-rose-600 font-bold">✕</button>
           </td>
         </tr>
@@ -941,7 +1280,22 @@
             backgroundColor: ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
           }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            datalabels: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: $${ctx.parsed.toLocaleString('es-AR', { minimumFractionDigits: 2 })} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
       });
 
       // 2. Ingresos por Categoria
@@ -960,7 +1314,22 @@
             backgroundColor: ['#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899']
           }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            datalabels: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                  return ` ${ctx.label}: $${ctx.parsed.toLocaleString('es-AR', { minimumFractionDigits: 2 })} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
       });
 
       // 3. Flujo Total por Integrante
@@ -977,7 +1346,33 @@
             { label: 'Egresos Totales (Gastos + Transf Enviadas + Ahorro)', data: egresosTotales, backgroundColor: '#f43f5e' }
           ]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: { y: { beginAtZero: true } },
+          plugins: {
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#334155',
+              font: { weight: 'bold', size: 10 },
+              formatter: (value, ctx) => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                if (!total) return '';
+                return `${((value / total) * 100).toFixed(0)}%`;
+              }
+            },
+            tooltip: {
+              callbacks: {
+                label: (ctx) => {
+                  const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                  const pct = total ? ((ctx.parsed.y / total) * 100).toFixed(1) : 0;
+                  return ` ${ctx.dataset.label}: $${ctx.parsed.y.toLocaleString('es-AR', { minimumFractionDigits: 2 })} (${pct}% del total)`;
+                }
+              }
+            }
+          }
+        }
       });
     }
   </script>
