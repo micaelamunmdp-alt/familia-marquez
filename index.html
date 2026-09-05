@@ -38,7 +38,7 @@
     </header>
 
     <!-- Tarjetas de Resumen General del Hogar -->
-    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
         <p class="text-xs font-semibold uppercase text-slate-400">Ingresos Externos</p>
         <p id="totalIngresos" class="text-xl md:text-2xl font-extrabold text-emerald-600 mt-1">$0.00</p>
@@ -54,10 +54,6 @@
       <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-slate-700">
         <p class="text-xs font-semibold uppercase text-slate-400">Superávit Hogar</p>
         <p id="totalBalance" class="text-xl md:text-2xl font-extrabold text-slate-900 mt-1">$0.00</p>
-      </div>
-      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-purple-500 col-span-2 md:col-span-1">
-        <p class="text-xs font-semibold uppercase text-slate-400">Transferencias Internas</p>
-        <p id="totalTransferencias" class="text-xl md:text-2xl font-extrabold text-purple-600 mt-1">$0.00</p>
       </div>
     </div>
 
@@ -117,6 +113,7 @@
                 <option value="Mantenimiento Auto">Mantenimiento Auto</option>
                 <option value="Salud / Farmacia">Salud / Farmacia</option>
                 <option value="Préstamo Bancario">Préstamo Bancario</option>
+                <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
               </select>
             </div>
             <div>
@@ -992,12 +989,10 @@
       const sumG = listGastos.reduce((a, b) => a + b.monto, 0);
       const sumI = listIngresos.reduce((a, b) => a + b.monto, 0);
       const sumA = listAhorros.reduce((a, b) => a + b.monto, 0);
-      const sumT = listTransf.reduce((a, b) => a + b.monto, 0);
 
       document.getElementById('totalGastos').innerText = `$${sumG.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
       document.getElementById('totalIngresos').innerText = `$${sumI.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
       document.getElementById('totalAhorros').innerText = `$${sumA.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
-      document.getElementById('totalTransferencias').innerText = `$${sumT.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
       document.getElementById('totalBalance').innerText = `$${(sumI - sumG - sumA).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
 
       renderMetaAhorro();
