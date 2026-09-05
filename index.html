@@ -89,9 +89,13 @@
               <select id="categoriaGasto" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
                 <option value="Supermercado / Mercadería">Supermercado / Mercadería</option>
                 <option value="Servicios (Luz, Gas, Agua, Internet)">Servicios (Luz, Gas, Agua, Internet)</option>
+                <option value="Recarga de Celular">Recarga de Celular</option>
                 <option value="Gimnasio / Deportes">Gimnasio / Deportes</option>
                 <option value="Vivienda / Alquiler / Expensas">Vivienda / Alquiler / Expensas</option>
-                <option value="Transporte / Combustible / Patente">Transporte / Combustible</option>
+                <option value="Mantenimiento Hogar">Mantenimiento Hogar</option>
+                <option value="Transporte (Uber/Didi)">Transporte (Uber/Didi)</option>
+                <option value="Combustible">Combustible</option>
+                <option value="Mantenimiento / Reparaciones Auto">Mantenimiento / Reparaciones Auto</option>
                 <option value="Salud / Farmacia / Obra Social">Salud / Farmacia</option>
                 <option value="Ocio / Salidas / Comidas Fuera">Ocio / Salidas</option>
                 <option value="Mascotas">Mascotas</option>
@@ -108,6 +112,27 @@
                 <option value="Micaela">Micaela</option>
               </select>
             </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">¿Se divide el gasto?</label>
+            <div class="grid grid-cols-3 gap-1 bg-slate-100 p-1 rounded-lg text-xs font-bold text-center mb-2">
+              <label class="py-1.5 rounded-md cursor-pointer has-[:checked]:bg-white has-[:checked]:shadow has-[:checked]:text-rose-600 text-slate-500">
+                <input type="radio" name="divisionGasto" value="ninguno" checked class="hidden" onchange="toggleDivisionGasto()"> No dividir
+              </label>
+              <label class="py-1.5 rounded-md cursor-pointer has-[:checked]:bg-white has-[:checked]:shadow has-[:checked]:text-rose-600 text-slate-500">
+                <input type="radio" name="divisionGasto" value="todos" class="hidden" onchange="toggleDivisionGasto()"> Entre todos
+              </label>
+              <label class="py-1.5 rounded-md cursor-pointer has-[:checked]:bg-white has-[:checked]:shadow has-[:checked]:text-rose-600 text-slate-500">
+                <input type="radio" name="divisionGasto" value="algunos" class="hidden" onchange="toggleDivisionGasto()"> Elegir
+              </label>
+            </div>
+            <div id="checksDivisionGasto" class="hidden grid grid-cols-2 gap-1.5 bg-slate-50 border border-slate-200 rounded-lg p-2.5">
+              <label class="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" class="chkDivisionGasto" value="Ignacio"> Ignacio</label>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" class="chkDivisionGasto" value="Laura"> Laura</label>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" class="chkDivisionGasto" value="Fabricio"> Fabricio</label>
+              <label class="flex items-center gap-1.5 text-xs text-slate-600"><input type="checkbox" class="chkDivisionGasto" value="Micaela"> Micaela</label>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">Si dividís, se genera una deuda automática de cada integrante elegido hacia quien pagó.</p>
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-500 mb-1">Medio de Pago</label>
@@ -247,6 +272,17 @@
             </div>
           </div>
           <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Tipo de Transferencia</label>
+            <div class="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-lg text-xs font-bold text-center">
+              <label class="py-1.5 rounded-md cursor-pointer has-[:checked]:bg-white has-[:checked]:shadow has-[:checked]:text-purple-700 text-slate-500">
+                <input type="radio" name="tipoTransf" value="donacion" checked class="hidden"> Donación
+              </label>
+              <label class="py-1.5 rounded-md cursor-pointer has-[:checked]:bg-white has-[:checked]:shadow has-[:checked]:text-amber-700 text-slate-500">
+                <input type="radio" name="tipoTransf" value="deuda" class="hidden"> Deuda
+              </label>
+            </div>
+          </div>
+          <div>
             <label class="block text-xs font-semibold text-slate-500 mb-1">Modalidad / Canal</label>
             <select id="canalTransf" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
               <option value="Efectivo Mano a Mano">Efectivo Mano a Mano</option>
@@ -295,6 +331,21 @@
       </div>
       <div id="gridBalancesIndividuales" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Generado dinámicamente -->
+      </div>
+    </div>
+
+    <!-- DEUDAS INTERNAS -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm space-y-4">
+      <div class="border-b pb-2">
+        <h3 class="text-base font-bold text-slate-900">Deudas Internas entre Integrantes</h3>
+        <p class="text-xs text-slate-500">Transferencias marcadas como "Deuda" para poder rendir cuentas entre la familia (no se filtran por mes).</p>
+      </div>
+      <div id="listaDeudasPendientes" class="space-y-2">
+        <!-- Generado dinámicamente -->
+      </div>
+      <div id="contDeudasSaldadas" class="hidden">
+        <p class="text-xs font-semibold text-slate-400 uppercase mt-2 mb-1">Deudas ya saldadas</p>
+        <div id="listaDeudasSaldadas" class="space-y-1"></div>
       </div>
     </div>
 
@@ -387,7 +438,7 @@
     // ============ FIREBASE ============
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
-    import { getDatabase, ref, push, set, remove, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+    import { getDatabase, ref, push, set, remove, update, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDKtKTSjimfEM1J3BoQLn71bJIlKze3kKE",
@@ -487,6 +538,10 @@
         }
       });
     }
+    window.toggleDivisionGasto = () => {
+      const modo = document.querySelector('input[name="divisionGasto"]:checked').value;
+      document.getElementById('checksDivisionGasto').classList.toggle('hidden', modo !== 'algunos');
+    };
     window.toggleForm = toggleForm;
 
     // Formularios: ahora cada envío escribe directamente en Firebase.
@@ -494,16 +549,55 @@
     // de arriba se dispara solo (para vos y para el resto de la familia).
     document.getElementById('formGasto').addEventListener('submit', e => {
       e.preventDefault();
+      const pagador = document.getElementById('integranteGasto').value;
+      const monto = parseFloat(document.getElementById('montoGasto').value);
+      const concepto = document.getElementById('conceptoGasto').value;
+      const fecha = document.getElementById('fechaGasto').value;
+      const modoDivision = document.querySelector('input[name="divisionGasto"]:checked').value;
+
+      let divididoEntre = null;
+      if (modoDivision === 'todos') {
+        divididoEntre = [...INTEGRANTES];
+      } else if (modoDivision === 'algunos') {
+        const seleccionados = Array.from(document.querySelectorAll('.chkDivisionGasto:checked')).map(c => c.value);
+        divididoEntre = seleccionados.length > 0 ? seleccionados : null;
+      }
+
       push(refGastos, {
-        fecha: document.getElementById('fechaGasto').value,
-        concepto: document.getElementById('conceptoGasto').value,
-        monto: parseFloat(document.getElementById('montoGasto').value),
+        fecha,
+        concepto,
+        monto,
         categoria: document.getElementById('categoriaGasto').value,
-        integrante: document.getElementById('integranteGasto').value,
-        medio: document.getElementById('medioGasto').value
+        integrante: pagador,
+        medio: document.getElementById('medioGasto').value,
+        divididoEntre
       });
+
+      // Si se divide entre más de una persona, se genera una deuda
+      // automática de cada integrante (menos quien pagó) hacia el pagador.
+      if (divididoEntre && divididoEntre.length > 1) {
+        const parte = monto / divididoEntre.length;
+        divididoEntre.forEach(persona => {
+          if (persona !== pagador) {
+            push(refTransf, {
+              fecha,
+              monto: parte,
+              origen: pagador,
+              destino: persona,
+              canal: 'Gasto Dividido',
+              tipo: 'deuda',
+              saldada: false,
+              nota: `Parte del gasto: ${concepto}`
+            });
+          }
+        });
+      }
+
       document.getElementById('conceptoGasto').value = '';
       document.getElementById('montoGasto').value = '';
+      document.querySelectorAll('.chkDivisionGasto').forEach(c => c.checked = false);
+      document.querySelector('input[name="divisionGasto"][value="ninguno"]').checked = true;
+      document.getElementById('checksDivisionGasto').classList.add('hidden');
     });
 
     document.getElementById('formIngreso').addEventListener('submit', e => {
@@ -543,16 +637,21 @@
         return;
       }
 
+      const tipoSeleccionado = document.querySelector('input[name="tipoTransf"]:checked').value;
+
       push(refTransf, {
         fecha: document.getElementById('fechaTransf').value,
         monto: parseFloat(document.getElementById('montoTransf').value),
         origen,
         destino,
         canal: document.getElementById('canalTransf').value,
+        tipo: tipoSeleccionado,
+        saldada: false,
         nota: document.getElementById('notaTransf').value || 'Sin nota'
       });
       document.getElementById('montoTransf').value = '';
       document.getElementById('notaTransf').value = '';
+      document.querySelector('input[name="tipoTransf"][value="donacion"]').checked = true;
     });
 
     window.borrarRegistro = (tipo, id) => {
@@ -560,6 +659,10 @@
       const path = paths[tipo];
       if (!path) return;
       remove(ref(db, `${path}/${id}`));
+    };
+
+    window.marcarDeudaSaldada = (id) => {
+      update(ref(db, `transferencias/${id}`), { saldada: true });
     };
 
     function limpiarFiltroMes() {
@@ -666,6 +769,7 @@
       });
 
       renderBalancesIndividuales(resumenInd);
+      renderDeudas();
       renderTablaGastos(listGastos);
       renderTablaIngresos(listIngresos);
       renderTablaAhorros(listAhorros);
@@ -719,13 +823,46 @@
       }).join('');
     }
 
+    function renderDeudas() {
+      // Las deudas se muestran siempre completas (sin filtro de mes),
+      // porque son una obligación pendiente hasta que se salde.
+      const deudas = transferencias.filter(t => t.tipo === 'deuda');
+      const pendientes = deudas.filter(d => !d.saldada).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      const saldadas = deudas.filter(d => d.saldada).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+      const pendCont = document.getElementById('listaDeudasPendientes');
+      pendCont.innerHTML = pendientes.length ? pendientes.map(d => `
+        <div class="flex justify-between items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div>
+            <p class="text-sm font-bold text-slate-800">${d.destino} le debe a ${d.origen}: $${d.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</p>
+            <p class="text-[11px] text-slate-500">${d.fecha} · ${d.nota && d.nota !== 'Sin nota' ? d.nota : 'Sin nota'} · ${d.canal}</p>
+          </div>
+          <button onclick="marcarDeudaSaldada('${d.id}')" class="text-xs bg-white border border-amber-300 hover:bg-amber-100 text-amber-800 font-semibold px-3 py-1.5 rounded-lg whitespace-nowrap">Marcar saldada</button>
+        </div>
+      `).join('') : `<p class="text-xs text-slate-400">No hay deudas pendientes entre integrantes.</p>`;
+
+      const saldWrap = document.getElementById('contDeudasSaldadas');
+      const saldCont = document.getElementById('listaDeudasSaldadas');
+      if (saldadas.length) {
+        saldWrap.classList.remove('hidden');
+        saldCont.innerHTML = saldadas.map(d => `
+          <p class="text-[11px] text-slate-400 line-through">${d.destino} le debía a ${d.origen}: $${d.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })} (${d.fecha})</p>
+        `).join('');
+      } else {
+        saldWrap.classList.add('hidden');
+      }
+    }
+
     function renderTablaGastos(list) {
       document.getElementById('cantGastos').innerText = `${list.length} registros`;
       const tbody = document.getElementById('tablaGastos');
       tbody.innerHTML = list.map(item => `
         <tr class="hover:bg-slate-50 border-b border-slate-100">
           <td class="p-2.5 whitespace-nowrap">${item.fecha}</td>
-          <td class="p-2.5 font-medium text-slate-800">${item.concepto}</td>
+          <td class="p-2.5 font-medium text-slate-800">
+            ${item.concepto}
+            ${item.divididoEntre && item.divididoEntre.length > 1 ? `<br><span class="text-[10px] text-indigo-500 font-semibold">Dividido: ${item.divididoEntre.join(', ')}</span>` : ''}
+          </td>
           <td class="p-2.5"><span class="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-semibold">${item.categoria}</span></td>
           <td class="p-2.5 font-semibold text-slate-700">${item.integrante}</td>
           <td class="p-2.5 text-slate-500">${item.medio}</td>
@@ -772,7 +909,12 @@
       tbody.innerHTML = list.map(item => `
         <tr class="hover:bg-slate-50 border-b border-slate-100">
           <td class="p-2 whitespace-nowrap">${item.fecha}</td>
-          <td class="p-2 font-semibold text-slate-700">${item.origen} ➔ ${item.destino}</td>
+          <td class="p-2 font-semibold text-slate-700">
+            ${item.origen} ➔ ${item.destino}
+            ${item.tipo === 'deuda'
+              ? `<br><span class="text-[10px] font-bold ${item.saldada ? 'text-emerald-500' : 'text-amber-600'}">${item.saldada ? '✓ Deuda saldada' : 'Deuda pendiente'}</span>`
+              : `<br><span class="text-[10px] font-semibold text-purple-400">Donación</span>`}
+          </td>
           <td class="p-2 text-slate-500">${item.canal}</td>
           <td class="p-2 font-extrabold text-purple-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
           <td class="p-2 text-center">
