@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control Financiero Familiar Integral</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 p-3 md:p-6">
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- Encabezado -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center bg-white p-5 rounded-2xl shadow-sm gap-4">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900">Control Financiero Familiar</h1>
+        <p class="text-slate-500 text-sm">Familia: Ignacio, Laura, Fabricio y Micaela</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <label class="text-xs font-semibold text-slate-500 uppercase">Filtrar Mes:</label>
+        <input type="month" id="filtroMes" onchange="render()" class="border rounded-lg p-1.5 text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50">
+        <button onclick="limpiarFiltroMes()" class="text-xs bg-slate-200 hover:bg-slate-300 px-2.5 py-2 rounded-lg font-medium text-slate-700">Ver Todo</button>
+        <button onclick="exportarBackup()" class="text-xs bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 px-2.5 py-2 rounded-lg font-semibold">💾 Guardar Copia</button>
+        <label class="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 px-2.5 py-2 rounded-lg font-semibold cursor-pointer">
+          📂 Cargar Copia
+          <input type="file" id="importarFile" onchange="importarBackup(event)" class="hidden" accept=".json">
+        </label>
+      </div>
+    </header>
+
+    <!-- Tarjetas de Resumen General del Hogar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
+        <p class="text-xs font-semibold uppercase text-slate-400">Ingresos Externos</p>
+        <p id="totalIngresos" class="text-xl md:text-2xl font-extrabold text-emerald-600 mt-1">$0.00</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-rose-500">
+        <p class="text-xs font-semibold uppercase text-slate-400">Gastos Reales Hogar</p>
+        <p id="totalGastos" class="text-xl md:text-2xl font-extrabold text-rose-600 mt-1">$0.00</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+        <p class="text-xs font-semibold uppercase text-slate-400">Ahorro Fondo Común</p>
+        <p id="totalAhorros" class="text-xl md:text-2xl font-extrabold text-blue-600 mt-1">$0.00</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-slate-700">
+        <p class="text-xs font-semibold uppercase text-slate-400">Superávit Hogar</p>
+        <p id="totalBalance" class="text-xl md:text-2xl font-extrabold text-slate-900 mt-1">$0.00</p>
+      </div>
+      <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-purple-500 col-span-2 md:col-span-1">
+        <p class="text-xs font-semibold uppercase text-slate-400">Transferencias Internas</p>
+        <p id="totalTransferencias" class="text-xl md:text-2xl font-extrabold text-purple-600 mt-1">$0.00</p>
+      </div>
+    </div>
+
+    <!-- Pestañas y Formularios + Gráficos -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      
+      <!-- Panel de Registros (Formularios) -->
+      <div class="lg:col-span-5 bg-white p-5 rounded-2xl shadow-sm space-y-5">
+        
+        <!-- Pestañas -->
+        <div class="grid grid-cols-4 gap-1 bg-slate-100 p-1 rounded-xl text-xs font-bold text-center">
+          <button id="tabGastoBtn" onclick="toggleForm('gasto')" class="py-2 rounded-lg bg-white shadow text-rose-600">Gasto</button>
+          <button id="tabIngresoBtn" onclick="toggleForm('ingreso')" class="py-2 rounded-lg text-slate-500 hover:text-slate-800">Ingreso</button>
+          <button id="tabAhorroBtn" onclick="toggleForm('ahorro')" class="py-2 rounded-lg text-slate-500 hover:text-slate-800">Ahorro</button>
+          <button id="tabTransfBtn" onclick="toggleForm('transf')" class="py-2 rounded-lg text-slate-500 hover:text-slate-800">Transf.</button>
+        </div>
+
+        <!-- Formulario: Gasto -->
+        <form id="formGasto" class="space-y-3">
+          <h3 class="text-sm font-bold text-slate-700 border-b pb-1">Registrar Gasto de la Familia</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Fecha</label>
+              <input type="date" id="fechaGasto" required class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Monto ($)</label>
+              <input type="number" step="0.01" id="montoGasto" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Concepto / Detalle</label>
+            <input type="text" id="conceptoGasto" required placeholder="Ej: Supermercado, Factura Luz, Cuota Gimnasio" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Categoría</label>
+              <select id="categoriaGasto" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
+                <option value="Supermercado / Mercadería">Supermercado / Mercadería</option>
+                <option value="Servicios (Luz, Gas, Agua, Internet)">Servicios (Luz, Gas, Agua, Internet)</option>
+                <option value="Gimnasio / Deportes">Gimnasio / Deportes</option>
+                <option value="Vivienda / Alquiler / Expensas">Vivienda / Alquiler / Expensas</option>
+                <option value="Transporte / Combustible / Patente">Transporte / Combustible</option>
+                <option value="Salud / Farmacia / Obra Social">Salud / Farmacia</option>
+                <option value="Ocio / Salidas / Comidas Fuera">Ocio / Salidas</option>
+                <option value="Mascotas">Mascotas</option>
+                <option value="Indumentaria / Ropa">Indumentaria / Ropa</option>
+                <option value="Otros">Otros</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Quién Pagó</label>
+              <select id="integranteGasto" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
+                <option value="Ignacio">Ignacio</option>
+                <option value="Laura">Laura</option>
+                <option value="Fabricio">Fabricio</option>
+                <option value="Micaela">Micaela</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Medio de Pago</label>
+            <select id="medioGasto" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-rose-500 outline-none">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Cuenta Bancaria / Transferencia">Cuenta Bancaria / Transferencia</option>
+              <option value="Mercado Pago">Mercado Pago</option>
+              <option value="Tarjeta de Débito">Tarjeta de Débito</option>
+              <option value="Tarjeta de Crédito">Tarjeta de Crédito</option>
+            </select>
+          </div>
+          <button type="submit" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Gasto</button>
+        </form>
+
+        <!-- Formulario: Ingreso -->
+        <form id="formIngreso" class="space-y-3 hidden">
+          <h3 class="text-sm font-bold text-slate-700 border-b pb-1">Registrar Ingreso Externo</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Fecha</label>
+              <input type="date" id="fechaIngreso" required class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Monto ($)</label>
+              <input type="number" step="0.01" id="montoIngreso" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Concepto / Fuente</label>
+            <input type="text" id="conceptoIngreso" required placeholder="Ej: Sueldo, Cobro de trabajo freelance, Venta" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Categoría</label>
+              <select id="categoriaIngreso" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="Sueldo / Salario Líquido">Sueldo / Salario Líquido</option>
+                <option value="Trabajo Indep. / Freelance">Trabajo Indep. / Freelance</option>
+                <option value="Venta de Bienes">Venta de Bienes</option>
+                <option value="Inversiones / Rendimientos">Inversiones / Rendimientos</option>
+                <option value="Regalo / Bonificación">Regalo / Bonificación</option>
+                <option value="Otros Ingresos">Otros Ingresos</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Quién lo Recibe</label>
+              <select id="integranteIngreso" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+                <option value="Ignacio">Ignacio</option>
+                <option value="Laura">Laura</option>
+                <option value="Fabricio">Fabricio</option>
+                <option value="Micaela">Micaela</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Medio / Cuenta</label>
+            <select id="medioIngreso" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-emerald-500 outline-none">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Cuenta Bancaria">Cuenta Bancaria</option>
+              <option value="Mercado Pago">Mercado Pago</option>
+            </select>
+          </div>
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Ingreso</button>
+        </form>
+
+        <!-- Formulario: Ahorro -->
+        <form id="formAhorro" class="space-y-3 hidden">
+          <h3 class="text-sm font-bold text-slate-700 border-b pb-1">Registrar Ahorro u Fondo</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Fecha</label>
+              <input type="date" id="fechaAhorro" required class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Monto ($)</label>
+              <input type="number" step="0.01" id="montoAhorro" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Meta / Fondo</label>
+            <input type="text" id="conceptoAhorro" required placeholder="Ej: Fondo Emergencia, Vacaciones, Dólares" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Ahorrador</label>
+              <select id="integranteAhorro" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="Familiar General">Familiar General</option>
+                <option value="Ignacio">Ignacio</option>
+                <option value="Laura">Laura</option>
+                <option value="Fabricio">Fabricio</option>
+                <option value="Micaela">Micaela</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Ubicación Ahorro</label>
+              <select id="medioAhorro" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="Efectivo / Colchón">Efectivo / Colchón</option>
+                <option value="Plazo Fijo / Inversión">Plazo Fijo / Inversión</option>
+                <option value="Cuenta Bancaria Ahorro">Cuenta Bancaria Ahorro</option>
+                <option value="Cripto / USD">Cripto / USD</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Ahorro</button>
+        </form>
+
+        <!-- Formulario: Transferencia -->
+        <form id="formTransf" class="space-y-3 hidden">
+          <h3 class="text-sm font-bold text-slate-700 border-b pb-1">Transferencia entre Integrantes</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Fecha</label>
+              <input type="date" id="fechaTransf" required class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Monto ($)</label>
+              <input type="number" step="0.01" id="montoTransf" required placeholder="0.00" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Emisor (Egresa de)</label>
+              <select id="origenTransf" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                <option value="Ignacio">Ignacio</option>
+                <option value="Laura">Laura</option>
+                <option value="Fabricio">Fabricio</option>
+                <option value="Micaela">Micaela</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-500 mb-1">Receptor (Ingresa a)</label>
+              <select id="destinoTransf" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+                <option value="Laura">Laura</option>
+                <option value="Ignacio">Ignacio</option>
+                <option value="Fabricio">Fabricio</option>
+                <option value="Micaela">Micaela</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Modalidad / Canal</label>
+            <select id="canalTransf" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value="Efectivo Mano a Mano">Efectivo Mano a Mano</option>
+              <option value="Mercado Pago">Mercado Pago</option>
+              <option value="Transferencia Bancaria">Transferencia Bancaria</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-500 mb-1">Motivo / Nota (Opcional)</label>
+            <input type="text" id="notaTransf" placeholder="Ej: Devolución súper, aporte luz" class="w-full border rounded-lg p-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 rounded-lg text-xs transition duration-200">Añadir Transferencia</button>
+        </form>
+
+      </div>
+
+      <!-- Gráficos Estadísticos -->
+      <div class="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white p-4 rounded-2xl shadow-sm flex flex-col justify-between">
+          <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Gastos por Categoría</h4>
+          <div class="w-full h-48">
+            <canvas id="chartCat"></canvas>
+          </div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm flex flex-col justify-between">
+          <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ingresos Externos por Categoría</h4>
+          <div class="w-full h-48">
+            <canvas id="chartIngCat"></canvas>
+          </div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl shadow-sm flex flex-col justify-between md:col-span-2">
+          <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Flujo Total por Integrante (Ingresos Totales vs Egresos Totales)</h4>
+          <div class="w-full h-48">
+            <canvas id="chartFamilia"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- BALANCE INDIVIDUAL Y LIQUIDACIÓN INTERNA -->
+    <div class="bg-white p-5 rounded-2xl shadow-sm space-y-4">
+      <div class="border-b pb-2">
+        <h3 class="text-base font-bold text-slate-900">Estado Financiero Individual por Persona</h3>
+        <p class="text-xs text-slate-500">Muestra la contabilidad de cada uno incluyendo ingresos externos, pagos de gastos, transferencias enviadas/recibidas y saldo líquido final.</p>
+      </div>
+      <div id="gridBalancesIndividuales" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Generado dinámicamente -->
+      </div>
+    </div>
+
+    <!-- Tablas de Datos -->
+    <div class="space-y-6">
+      
+      <!-- Tabla Gastos -->
+      <div class="bg-white p-5 rounded-2xl shadow-sm overflow-x-auto">
+        <div class="flex justify-between items-center mb-3">
+          <h3 class="text-base font-bold text-slate-800">Historial de Gastos Reales del Hogar</h3>
+          <span id="cantGastos" class="text-xs bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-bold">0 registros</span>
+        </div>
+        <table class="w-full text-left text-xs text-slate-600">
+          <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
+            <tr>
+              <th class="p-2.5">Fecha</th>
+              <th class="p-2.5">Concepto</th>
+              <th class="p-2.5">Categoría</th>
+              <th class="p-2.5">Pagado Por</th>
+              <th class="p-2.5">Medio</th>
+              <th class="p-2.5">Monto</th>
+              <th class="p-2.5 text-center"></th>
+            </tr>
+          </thead>
+          <tbody id="tablaGastos" class="divide-y"></tbody>
+        </table>
+      </div>
+
+      <!-- Grid de Tablas Cortas: Ingresos, Ahorros, Transferencias -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Tabla Ingresos -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm overflow-x-auto">
+          <h3 class="text-base font-bold text-emerald-800 mb-3">Ingresos Externos</h3>
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
+              <tr>
+                <th class="p-2">Fecha</th>
+                <th class="p-2">Concepto / Cat.</th>
+                <th class="p-2">Recibe</th>
+                <th class="p-2">Monto</th>
+                <th class="p-2"></th>
+              </tr>
+            </thead>
+            <tbody id="tablaIngresos" class="divide-y"></tbody>
+          </table>
+        </div>
+
+        <!-- Tabla Ahorros -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm overflow-x-auto">
+          <h3 class="text-base font-bold text-blue-800 mb-3">Ahorros y Fondos</h3>
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
+              <tr>
+                <th class="p-2">Fecha</th>
+                <th class="p-2">Fondo</th>
+                <th class="p-2">Titular</th>
+                <th class="p-2">Monto</th>
+                <th class="p-2"></th>
+              </tr>
+            </thead>
+            <tbody id="tablaAhorros" class="divide-y"></tbody>
+          </table>
+        </div>
+
+        <!-- Tabla Transferencias -->
+        <div class="bg-white p-5 rounded-2xl shadow-sm overflow-x-auto">
+          <h3 class="text-base font-bold text-indigo-800 mb-3">Transferencias Internas</h3>
+          <table class="w-full text-left text-xs text-slate-600">
+            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
+              <tr>
+                <th class="p-2">Fecha</th>
+                <th class="p-2">De ➔ Para</th>
+                <th class="p-2">Medio</th>
+                <th class="p-2">Monto</th>
+                <th class="p-2"></th>
+              </tr>
+            </thead>
+            <tbody id="tablaTransf" class="divide-y"></tbody>
+          </table>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script type="module">
+    // ============ FIREBASE ============
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+    import { getDatabase, ref, push, set, remove, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDKtKTSjimfEM1J3BoQLn71bJIlKze3kKE",
+      authDomain: "control-financiero-marquez.firebaseapp.com",
+      databaseURL: "https://control-financiero-marquez-default-rtdb.firebaseio.com",
+      projectId: "control-financiero-marquez",
+      storageBucket: "control-financiero-marquez.firebasestorage.app",
+      messagingSenderId: "95941637095",
+      appId: "1:95941637095:web:d95ae0765f10ada8538342"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getAuth ? getDatabase(app) : null;
+    const auth = getAuth(app);
+
+    const refGastos = ref(db, 'gastos');
+    const refIngresos = ref(db, 'ingresos');
+    const refAhorros = ref(db, 'ahorros');
+    const refTransf = ref(db, 'transferencias');
+
+    function snapshotToArray(snapshot) {
+      const val = snapshot.val();
+      if (!val) return [];
+      return Object.entries(val).map(([id, data]) => ({ id, ...data }));
+    }
+
+    // Inicialización de Fechas por defecto a Hoy
+    const hoy = new Date().toISOString().split('T')[0];
+    ['fechaGasto', 'fechaIngreso', 'fechaAhorro', 'fechaTransf'].forEach(id => {
+      document.getElementById(id).value = hoy;
+    });
+
+    const INTEGRANTES = ['Ignacio', 'Laura', 'Fabricio', 'Micaela'];
+
+    // Los datos ahora viven en Firebase, no en localStorage.
+    // Estos arrays son sólo una copia local que se actualiza sola
+    // cada vez que cambia algo en la base de datos (en tiempo real).
+    let gastos = [];
+    let ingresos = [];
+    let ahorros = [];
+    let transferencias = [];
+
+    let chartCatObj, chartIngCatObj, chartFamObj;
+
+    function mostrarEstadoConexion(texto, ok) {
+      let el = document.getElementById('estadoConexion');
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'estadoConexion';
+        el.className = 'fixed bottom-3 right-3 text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm z-50';
+        document.body.appendChild(el);
+      }
+      el.innerText = texto;
+      el.className = `fixed bottom-3 right-3 text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm z-50 ${ok ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`;
+    }
+
+    // Inicia sesión anónima para poder leer/escribir según las reglas de la base
+    // y sólo después de eso conecta los listeners en tiempo real.
+    mostrarEstadoConexion('Conectando…', false);
+    signInAnonymously(auth).catch(err => {
+      console.error(err);
+      mostrarEstadoConexion('Error de conexión', false);
+      alert('No se pudo conectar con Firebase. Revisá la consola (F12) para más detalles.');
+    });
+
+    onAuthStateChanged(auth, user => {
+      if (!user) return;
+      mostrarEstadoConexion('Conectado en vivo ✓', true);
+
+      onValue(refGastos, snap => { gastos = snapshotToArray(snap); render(); });
+      onValue(refIngresos, snap => { ingresos = snapshotToArray(snap); render(); });
+      onValue(refAhorros, snap => { ahorros = snapshotToArray(snap); render(); });
+      onValue(refTransf, snap => { transferencias = snapshotToArray(snap); render(); });
+    });
+
+    function toggleForm(tipo) {
+      const forms = {
+        gasto: document.getElementById('formGasto'),
+        ingreso: document.getElementById('formIngreso'),
+        ahorro: document.getElementById('formAhorro'),
+        transf: document.getElementById('formTransf')
+      };
+      const btns = {
+        gasto: document.getElementById('tabGastoBtn'),
+        ingreso: document.getElementById('tabIngresoBtn'),
+        ahorro: document.getElementById('tabAhorroBtn'),
+        transf: document.getElementById('tabTransfBtn')
+      };
+
+      Object.keys(forms).forEach(key => {
+        if (key === tipo) {
+          forms[key].classList.remove('hidden');
+          btns[key].className = "py-2 rounded-lg bg-white shadow text-slate-900 font-bold";
+        } else {
+          forms[key].classList.add('hidden');
+          btns[key].className = "py-2 rounded-lg text-slate-500 hover:text-slate-800";
+        }
+      });
+    }
+    window.toggleForm = toggleForm;
+
+    // Formularios: ahora cada envío escribe directamente en Firebase.
+    // No hace falta "guardar" aparte: en cuanto se escribe, el listener
+    // de arriba se dispara solo (para vos y para el resto de la familia).
+    document.getElementById('formGasto').addEventListener('submit', e => {
+      e.preventDefault();
+      push(refGastos, {
+        fecha: document.getElementById('fechaGasto').value,
+        concepto: document.getElementById('conceptoGasto').value,
+        monto: parseFloat(document.getElementById('montoGasto').value),
+        categoria: document.getElementById('categoriaGasto').value,
+        integrante: document.getElementById('integranteGasto').value,
+        medio: document.getElementById('medioGasto').value
+      });
+      document.getElementById('conceptoGasto').value = '';
+      document.getElementById('montoGasto').value = '';
+    });
+
+    document.getElementById('formIngreso').addEventListener('submit', e => {
+      e.preventDefault();
+      push(refIngresos, {
+        fecha: document.getElementById('fechaIngreso').value,
+        concepto: document.getElementById('conceptoIngreso').value,
+        monto: parseFloat(document.getElementById('montoIngreso').value),
+        categoria: document.getElementById('categoriaIngreso').value,
+        integrante: document.getElementById('integranteIngreso').value,
+        medio: document.getElementById('medioIngreso').value
+      });
+      document.getElementById('conceptoIngreso').value = '';
+      document.getElementById('montoIngreso').value = '';
+    });
+
+    document.getElementById('formAhorro').addEventListener('submit', e => {
+      e.preventDefault();
+      push(refAhorros, {
+        fecha: document.getElementById('fechaAhorro').value,
+        concepto: document.getElementById('conceptoAhorro').value,
+        monto: parseFloat(document.getElementById('montoAhorro').value),
+        integrante: document.getElementById('integranteAhorro').value,
+        medio: document.getElementById('medioAhorro').value
+      });
+      document.getElementById('conceptoAhorro').value = '';
+      document.getElementById('montoAhorro').value = '';
+    });
+
+    document.getElementById('formTransf').addEventListener('submit', e => {
+      e.preventDefault();
+      const origen = document.getElementById('origenTransf').value;
+      const destino = document.getElementById('destinoTransf').value;
+
+      if (origen === destino) {
+        alert("El emisor y receptor no pueden ser la misma persona.");
+        return;
+      }
+
+      push(refTransf, {
+        fecha: document.getElementById('fechaTransf').value,
+        monto: parseFloat(document.getElementById('montoTransf').value),
+        origen,
+        destino,
+        canal: document.getElementById('canalTransf').value,
+        nota: document.getElementById('notaTransf').value || 'Sin nota'
+      });
+      document.getElementById('montoTransf').value = '';
+      document.getElementById('notaTransf').value = '';
+    });
+
+    window.borrarRegistro = (tipo, id) => {
+      const paths = { gasto: 'gastos', ingreso: 'ingresos', ahorro: 'ahorros', transf: 'transferencias' };
+      const path = paths[tipo];
+      if (!path) return;
+      remove(ref(db, `${path}/${id}`));
+    };
+
+    function limpiarFiltroMes() {
+      document.getElementById('filtroMes').value = '';
+      render();
+    }
+    window.limpiarFiltroMes = limpiarFiltroMes;
+
+    // Copia de Seguridad (sigue funcionando igual, pero ahora exporta
+    // lo que hay actualmente en la base de datos en tiempo real)
+    function exportarBackup() {
+      const data = { gastos, ingresos, ahorros, transferencias };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_gastos_familia_${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+    }
+    window.exportarBackup = exportarBackup;
+
+    // Importar backup ahora sube todo a Firebase. Como afecta a toda la
+    // familia en tiempo real, pide confirmación antes de reemplazar.
+    function importarBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (!data.gastos && !data.ingresos) {
+            alert("El archivo no tiene un formato válido.");
+            return;
+          }
+          const ok = confirm("Esto va a REEMPLAZAR los datos actuales de toda la familia en la base en tiempo real. ¿Continuar?");
+          if (!ok) return;
+
+          const subir = (arr, refX) => {
+            const obj = {};
+            (arr || []).forEach(item => {
+              const { id, ...rest } = item;
+              const key = push(refX).key;
+              obj[key] = rest;
+            });
+            return set(refX, obj);
+          };
+
+          Promise.all([
+            subir(data.gastos, refGastos),
+            subir(data.ingresos, refIngresos),
+            subir(data.ahorros, refAhorros),
+            subir(data.transferencias, refTransf)
+          ]).then(() => alert("¡Copia de seguridad cargada con éxito!"))
+            .catch(err => { console.error(err); alert("Error al subir los datos a Firebase."); });
+        } catch (err) {
+          alert("Error al leer el archivo JSON.");
+        }
+      };
+      reader.readAsText(file);
+    }
+    window.importarBackup = importarBackup;
+
+    // Renderizado Principal
+    function render() {
+      const mesFiltro = document.getElementById('filtroMes').value;
+
+      const filtrar = item => !mesFiltro || (item.fecha && item.fecha.startsWith(mesFiltro));
+
+      const listGastos = gastos.filter(filtrar).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      const listIngresos = ingresos.filter(filtrar).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      const listAhorros = ahorros.filter(filtrar).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+      const listTransf = transferencias.filter(filtrar).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+      // Totales
+      const sumG = listGastos.reduce((a, b) => a + b.monto, 0);
+      const sumI = listIngresos.reduce((a, b) => a + b.monto, 0);
+      const sumA = listAhorros.reduce((a, b) => a + b.monto, 0);
+      const sumT = listTransf.reduce((a, b) => a + b.monto, 0);
+
+      document.getElementById('totalGastos').innerText = `$${sumG.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+      document.getElementById('totalIngresos').innerText = `$${sumI.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+      document.getElementById('totalAhorros').innerText = `$${sumA.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+      document.getElementById('totalTransferencias').innerText = `$${sumT.toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+      document.getElementById('totalBalance').innerText = `$${(sumI - sumG - sumA).toLocaleString('es-AR', { minimumFractionDigits: 2 })}`;
+
+      // Cálculo por Persona
+      const resumenInd = {};
+      INTEGRANTES.forEach(p => {
+        resumenInd[p] = {
+          ingresoExt: 0,
+          gastosPagados: 0,
+          transfEnviadas: 0,
+          transfRecibidas: 0,
+          ahorroAportado: 0
+        };
+      });
+
+      listIngresos.forEach(i => { if (resumenInd[i.integrante]) resumenInd[i.integrante].ingresoExt += i.monto; });
+      listGastos.forEach(g => { if (resumenInd[g.integrante]) resumenInd[g.integrante].gastosPagados += g.monto; });
+      listAhorros.forEach(a => { if (resumenInd[a.integrante]) resumenInd[a.integrante].ahorroAportado += a.monto; });
+      listTransf.forEach(t => {
+        if (resumenInd[t.origen]) resumenInd[t.origen].transfEnviadas += t.monto;
+        if (resumenInd[t.destino]) resumenInd[t.destino].transfRecibidas += t.monto;
+      });
+
+      renderBalancesIndividuales(resumenInd);
+      renderTablaGastos(listGastos);
+      renderTablaIngresos(listIngresos);
+      renderTablaAhorros(listAhorros);
+      renderTablaTransf(listTransf);
+      actualizarGraficos(listGastos, listIngresos, resumenInd);
+    }
+    window.render = render;
+
+    function renderBalancesIndividuales(data) {
+      const cont = document.getElementById('gridBalancesIndividuales');
+      cont.innerHTML = INTEGRANTES.map(p => {
+        const d = data[p];
+        const totalIngresosIndividual = d.ingresoExt + d.transfRecibidas;
+        const totalEgresosIndividual = d.gastosPagados + d.transfEnviadas + d.ahorroAportado;
+        const saldoFinal = totalIngresosIndividual - totalEgresosIndividual;
+
+        return `
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex flex-col justify-between">
+            <div>
+              <h4 class="font-bold text-slate-800 text-sm border-b pb-1 mb-2 flex justify-between items-center">
+                <span>${p}</span>
+                <span class="${saldoFinal >= 0 ? 'text-emerald-600' : 'text-rose-600'} font-extrabold text-sm">
+                  $${saldoFinal.toLocaleString('es-AR', { minimumFractionDigits: 2 })}
+                </span>
+              </h4>
+              <div class="space-y-1 text-xs">
+                <div class="flex justify-between text-slate-600">
+                  <span>(+) Ingresos Ext:</span>
+                  <span class="font-semibold text-emerald-600">$${d.ingresoExt.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div class="flex justify-between text-slate-600">
+                  <span>(+) Transf. Recibidas:</span>
+                  <span class="font-semibold text-purple-600">$${d.transfRecibidas.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div class="flex justify-between text-slate-600">
+                  <span>(-) Gastos Pagados:</span>
+                  <span class="font-semibold text-rose-600">$${d.gastosPagados.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div class="flex justify-between text-slate-600">
+                  <span>(-) Transf. Enviadas:</span>
+                  <span class="font-semibold text-indigo-600">$${d.transfEnviadas.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                </div>
+                <div class="flex justify-between text-slate-600">
+                  <span>(-) Ahorro Aportado:</span>
+                  <span class="font-semibold text-blue-600">$${d.ahorroAportado.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTablaGastos(list) {
+      document.getElementById('cantGastos').innerText = `${list.length} registros`;
+      const tbody = document.getElementById('tablaGastos');
+      tbody.innerHTML = list.map(item => `
+        <tr class="hover:bg-slate-50 border-b border-slate-100">
+          <td class="p-2.5 whitespace-nowrap">${item.fecha}</td>
+          <td class="p-2.5 font-medium text-slate-800">${item.concepto}</td>
+          <td class="p-2.5"><span class="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-semibold">${item.categoria}</span></td>
+          <td class="p-2.5 font-semibold text-slate-700">${item.integrante}</td>
+          <td class="p-2.5 text-slate-500">${item.medio}</td>
+          <td class="p-2.5 font-extrabold text-rose-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+          <td class="p-2.5 text-center">
+            <button onclick="borrarRegistro('gasto', '${item.id}')" class="text-slate-400 hover:text-rose-600 font-bold">✕</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderTablaIngresos(list) {
+      const tbody = document.getElementById('tablaIngresos');
+      tbody.innerHTML = list.map(item => `
+        <tr class="hover:bg-slate-50 border-b border-slate-100">
+          <td class="p-2 whitespace-nowrap">${item.fecha}</td>
+          <td class="p-2 font-medium text-slate-800">${item.concepto} <br><span class="text-[10px] text-slate-400">${item.categoria}</span></td>
+          <td class="p-2 font-semibold text-slate-700">${item.integrante}</td>
+          <td class="p-2 font-extrabold text-emerald-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+          <td class="p-2 text-center">
+            <button onclick="borrarRegistro('ingreso', '${item.id}')" class="text-slate-400 hover:text-rose-600 font-bold">✕</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderTablaAhorros(list) {
+      const tbody = document.getElementById('tablaAhorros');
+      tbody.innerHTML = list.map(item => `
+        <tr class="hover:bg-slate-50 border-b border-slate-100">
+          <td class="p-2 whitespace-nowrap">${item.fecha}</td>
+          <td class="p-2 font-medium text-slate-800">${item.concepto}</td>
+          <td class="p-2 font-semibold text-slate-700">${item.integrante}</td>
+          <td class="p-2 font-extrabold text-blue-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+          <td class="p-2 text-center">
+            <button onclick="borrarRegistro('ahorro', '${item.id}')" class="text-slate-400 hover:text-rose-600 font-bold">✕</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderTablaTransf(list) {
+      const tbody = document.getElementById('tablaTransf');
+      tbody.innerHTML = list.map(item => `
+        <tr class="hover:bg-slate-50 border-b border-slate-100">
+          <td class="p-2 whitespace-nowrap">${item.fecha}</td>
+          <td class="p-2 font-semibold text-slate-700">${item.origen} ➔ ${item.destino}</td>
+          <td class="p-2 text-slate-500">${item.canal}</td>
+          <td class="p-2 font-extrabold text-purple-600">$${item.monto.toLocaleString('es-AR', { minimumFractionDigits: 2 })}</td>
+          <td class="p-2 text-center">
+            <button onclick="borrarRegistro('transf', '${item.id}')" class="text-slate-400 hover:text-rose-600 font-bold">✕</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function actualizarGraficos(listGastos, listIngresos, resumenInd) {
+      // 1. Gastos por Categoria
+      const catMap = {};
+      listGastos.forEach(g => {
+        catMap[g.categoria] = (catMap[g.categoria] || 0) + g.monto;
+      });
+
+      if (chartCatObj) chartCatObj.destroy();
+      chartCatObj = new Chart(document.getElementById('chartCat'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(catMap),
+          datasets: [{
+            data: Object.values(catMap),
+            backgroundColor: ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 2. Ingresos por Categoria
+      const ingCatMap = {};
+      listIngresos.forEach(i => {
+        ingCatMap[i.categoria] = (ingCatMap[i.categoria] || 0) + i.monto;
+      });
+
+      if (chartIngCatObj) chartIngCatObj.destroy();
+      chartIngCatObj = new Chart(document.getElementById('chartIngCat'), {
+        type: 'doughnut',
+        data: {
+          labels: Object.keys(ingCatMap),
+          datasets: [{
+            data: Object.values(ingCatMap),
+            backgroundColor: ['#10b981', '#06b6d4', '#3b82f6', '#8b5cf6', '#f59e0b', '#ec4899']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // 3. Flujo Total por Integrante
+      const ingresosTotales = INTEGRANTES.map(p => resumenInd[p].ingresoExt + resumenInd[p].transfRecibidas);
+      const egresosTotales = INTEGRANTES.map(p => resumenInd[p].gastosPagados + resumenInd[p].transfEnviadas + resumenInd[p].ahorroAportado);
+
+      if (chartFamObj) chartFamObj.destroy();
+      chartFamObj = new Chart(document.getElementById('chartFamilia'), {
+        type: 'bar',
+        data: {
+          labels: INTEGRANTES,
+          datasets: [
+            { label: 'Ingresos Totales (Ext + Transf Recibidas)', data: ingresosTotales, backgroundColor: '#10b981' },
+            { label: 'Egresos Totales (Gastos + Transf Enviadas + Ahorro)', data: egresosTotales, backgroundColor: '#f43f5e' }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+  </script>
+</body>
+</html>
